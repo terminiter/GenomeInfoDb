@@ -70,6 +70,9 @@ test_keepStandardChromosomes <- function()
     
     gr <- keepStandardChromosomes(gr)
     checkEquals(25,length(seqlevels(gr)))
+    
+    ## want to test if sorted seqlevels are being returned.
+    checkEquals(seqlevels(gr), c(paste0("chr",1:22), "chrX", "chrY" , "chrM"))
            
     gr2 <- keepStandardChromosomes(gr2, species="Homo sapiens")
     checkEquals(25,length(seqlevels(gr2)))
@@ -84,7 +87,7 @@ test_keepStandardChromosomes <- function()
     gr <- GRanges(c("chr1", "chr1_gl000192_random", "chrM", "chr1"), 
                   IRanges(1:4, width=3))
     gr <- keepStandardChromosomes(gr) 
-    checkEquals(c("chrM","chr1"), seqlevels(gr))
+    checkEquals(c("chr1","chrM"), seqlevels(gr))
     checkEquals(2, length(seqlevels(gr)))
     
     ## seqlevels not supported by GenomeInfodb.  
@@ -93,13 +96,20 @@ test_keepStandardChromosomes <- function()
     checkException(seqlevelsStyle(gr))
     
     ## drop seqlevels not supported by GenomeInfoDb
-    plantgr <- GRanges(c(31:35,"MT","Pltd"), IRanges(1:7,width=5))
+    plantgr <- GRanges(c(41:45,"MT","Pltd"), IRanges(1:7,width=5))
     plantgr <- keepStandardChromosomes(plantgr)
     checkEquals(c("MT","Pltd"), seqlevels(plantgr))
     
     ## no seqlevels in object
     checkEquals(0,length(seqlevels(keepStandardChromosomes(GRanges()))))
     
+    ## want to test if sorted seqlevels are being returned.
+    gr <- GRanges(c("chr10", "chr2", "chr3L", "3L"), 
+                  IRanges(1:4, width=3))
+    checkEquals(seqlevels(keepStandardChromosomes(gr)), 
+                c("chr10", "chr2", "chr3L"))
+    gr <- GRanges(c("chr3", "blabla", "chr1"), IRanges(1:3, 10)) 
+    checkEquals(seqlevels(keepStandardChromosomes(gr)), c("chr3", "chr1"))
 }    
 
 test_seqlevelsStyle <- function()
@@ -123,4 +133,29 @@ test_seqlevelsStyle <- function()
     checkException(seqlevelsStyle(c('')))
     checkException(seqlevelsStyle(GRanges()))
     
+}
+
+test_guessSpeciesStyle <- function()
+{
+    got  <- GenomeInfoDb:::.guessSpeciesStyle(c(paste0("chr",1:10)))
+    checkEquals(unique(got$style), "UCSC")
+    
+    got <- GenomeInfoDb:::.guessSpeciesStyle(c(paste0("chr",1:22)))
+    checkEquals(unique(got$style), "UCSC")
+    
+    got <- GenomeInfoDb:::.guessSpeciesStyle("chr2")
+    checkEquals(unique(got$style), "UCSC")
+    
+    got <- GenomeInfoDb:::.guessSpeciesStyle("2")
+    checkEquals(unique(got$style), c("NCBI","TAIR10","MSU6","JGI2.F","AGPvF"))
+    
+    got <- GenomeInfoDb:::.guessSpeciesStyle('T')
+    checkEquals(unique(got$style), "JGI2.F")
+    
+    got <- GenomeInfoDb:::.guessSpeciesStyle(c("chr1","chr2","chr3",
+        "chr1_gl000191_random", "chr1_gl000192_random"))
+    checkEquals(unique(got$style), "UCSC")
+    
+    got <-  GenomeInfoDb:::.guessSpeciesStyle("h")
+    checkEquals(got, NA)    
 }

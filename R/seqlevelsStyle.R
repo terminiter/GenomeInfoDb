@@ -100,14 +100,12 @@
        ans <- NA
     }else{
         ##vec is in format "Homo_sapiens.UCSC"
-        vec <- names(which.max(unlistgot2))
-        species <- sub("_", " ",unlist(strsplit(vec,"[.]")),fixed=TRUE)[[1]]
-        style <- unlist(strsplit(vec,"[.]"))[[2]]
-        ans <- c(species, style) 
+        vec <- names(which(unlistgot2==max(unlistgot2)))
+        species <- sub("_"," ",sub("(.*?)[.].*", "\\1", vec))
+        style <- gsub("^[^.]+.","", vec)
+        ans <- list(species=species, style=style) 
     }
-    
     ans
-    
 }
 
 
@@ -130,15 +128,30 @@ setMethod("seqlevelsStyle", "character",
         stop("No seqlevels present in this object.")
     
     seqnames <- unique(x)      
-    ans <- .guessSpeciesStyle(seqnames)[2]
-    if(is.na(ans)){
-        txt <- "The style does not have a compatible entry for the
+    ans <- .guessSpeciesStyle(seqnames)
+    
+    ## 3 cases -
+    ## 1. if no style found - ans is na - stop with message 
+    ## 2. if multiple styles returned then print message saying that it could be 
+    ## any of these styles
+    ## 3. if one style returned - hurray!
+    
+    if(length(ans)==1){
+        if(is.na(ans)){
+            txt <- "The style does not have a compatible entry for the
             species supported by Seqname. Please see
             genomeStyles() for supported species/style"
-        stop(paste(strwrap(txt, exdent=2), collapse="\n"))
-        
+            stop(paste(strwrap(txt, exdent=2), collapse="\n"))
+        }
     }
-    ans
+    
+    
+    style <- unique(ans$style)
+    
+    if(length(style)>1)
+        message("warning! Multiple seqnameStyles found.")
+      
+    style
 })
 
 ### The default methods work on any object 'x' with working "seqlevels"
@@ -208,9 +221,11 @@ extractSeqlevelsByGroup <-
     function(species, style, group)
 {
     if (missing(species) || missing(style) || missing(group))
-        stop("'species', 'style', and / or 'group' missing")     
+        stop("'species', 'style', and / or 'group' missing")   
+    
+    logic <-sapply(species, function(x) .isSupportedSeqnamesStyle(x, style))
         
-    if(.isSupportedSeqnamesStyle(species, style))
+    if(all(logic))
     {
         data <- .getDataInFile(species)
         if (group!="all"){
@@ -278,13 +293,16 @@ seqlevelsInGroup <-
     if (missing(species) && missing(style)) {
         ## guess the species and / or style for the object
         ans <- .guessSpeciesStyle(seqnames)
-        species<- ans[1]
-        style <- ans[2]
+        species<- ans$species
+        style <- unique(unlist(ans$style))
     }
     
-    if (.isSupportedSeqnamesStyle(species, style)) {
-        seqvec <- extractSeqlevelsByGroup( species, style, group)
-        seqvec[na.omit(match(seqnames, seqvec))]
+    logic <-sapply(species, function(x) .isSupportedSeqnamesStyle(x, style))
+    
+    if (all(logic)) {
+        seqvec <- sapply(unlist(species), function(x) 
+            extractSeqlevelsByGroup( x, style, group))
+        unique(unlist(seqvec))[na.omit(match(seqnames, unique(unlist(seqvec))))]
     } else {
         txt <- paste0( "The style specified by ", sQuote(style),
                        " does not have a compatible entry for the species ",
