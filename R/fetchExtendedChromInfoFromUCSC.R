@@ -215,7 +215,7 @@ standard_fetch_extended_ChromInfo_from_UCSC <- function(genome,
 
 .genome2idx <- function(genome)
 {
-    refseq_assembly_id <- lookup_refseq_assembly_id(genome)
+    refseq_assembly_id <- lookup_refseq_assembly_accession(genome)
     if (is.na(refseq_assembly_id))
         return(NA_integer_)
     refseq_assembly_ids <- sapply(.SUPPORTED_GENOMES,
