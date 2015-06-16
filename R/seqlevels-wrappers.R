@@ -6,8 +6,8 @@ keepSeqlevels <- function(x, value, ...)
 {
     value <- unname(value)
     if (any(nomatch <- !value %in% seqlevels(x)))
-        warning("invalid seqlevels '", 
-                paste(value[nomatch], collapse=","), "' were ignored")
+        warning("invalid seqlevels", 
+                paste(sQuote(value[nomatch]), collapse=", "), "were ignored")
     if (is(x, "BSgenome"))
         stop("seqlevels cannot be dropped from a BSgenome object")
     force <- is(x, "Seqinfo")
@@ -19,8 +19,8 @@ dropSeqlevels <- function(x, value, ...)
 {
     value <- unname(value)
     if (any(nomatch <- !value %in% seqlevels(x)))
-        warning("invalid seqlevels '", 
-                paste(value[nomatch], collapse=","), "' were ignored")
+        warning("invalid seqlevels", 
+                paste(sQuote(value[nomatch]), collapse=", "), "were ignored")
     if (is(x, "BSgenome"))
         stop("seqlevels cannot be dropped from a BSgenome object")
     force <- is(x, "Seqinfo")
@@ -43,12 +43,12 @@ renameSeqlevels <- function(x, value, ...)
                     paste(sQuote(nms[nomatch]), collapse=", "), " ignored")
         if (length(value) != length(seqlevels(x))) {
             level <- seqlevels(x)
-            idx <- match(nms, level)
-            idx <- idx[complete.cases(idx)]
-            value <- replace(level, idx, value[seq_along(idx)])
+            idx <- match(level, nms)
+            level[!is.na(idx)] <- value[na.omit(idx)]
+            value <- level
         } 
     } 
-    seqlevels(x) <- value  
+    seqlevels(x) <- value 
     x 
 }
 
